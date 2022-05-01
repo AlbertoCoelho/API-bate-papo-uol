@@ -4,6 +4,7 @@ import cors from 'cors';
 import chalk from 'chalk';
 import dayjs from 'dayjs';
 import dotenv from 'dotenv';
+import joi from 'joi';
 dotenv.config();
 
 
@@ -15,6 +16,12 @@ server.use(cors());
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 await mongoClient.connect();
 const db = mongoClient.db("api_bate_papo_uol");
+
+const userSchema = joi.object({
+  name: joi.string().required()
+});
+
+
 
 server.get("/participants", async (req,res) => {
   try {
@@ -29,6 +36,12 @@ server.get("/participants", async (req,res) => {
 
 server.post("/participants", async(req,res) => {
   const  user = req.body;
+  //Só vai validar uma propriedade chamada "name".
+  const validation = userSchema.validate(user);
+  if (validation.error) {
+    console.log(validation.error.details);
+    res.sendStatus(422);
+  }
   try {
     const participantsCollection = db.collection("participants");
     //Encontrar participante
