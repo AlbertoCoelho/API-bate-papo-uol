@@ -17,10 +17,6 @@ const mongoClient = new MongoClient(process.env.MONGO_URI);
 await mongoClient.connect();
 const db = mongoClient.db("api_bate_papo_uol");
 
-const userSchema = joi.object({
-  name: joi.string().required()
-});
-
 
 server.get("/participants", async (req,res) => {
   try {
@@ -35,16 +31,20 @@ server.get("/participants", async (req,res) => {
 
 server.post("/participants", async (req,res) => {
   const  user = req.body;
-  //Só vai validar uma propriedade chamada "name".
-  const validation = userSchema.validate(user);
+  const userSchema = joi.object({
+    name: joi.string().required()
+  });
+
+  const validation = userSchema.validate(user, { abortEarly: true });
   if (validation.error) {
     console.log(validation.error.details);
     res.sendStatus(422);
+    return;
   }
   try {
     const participantsCollection = db.collection("participants");
     //Encontrar participante
-    const participant = await participantsCollection.findOne({ name: user.name });
+    const participant = await participantsCollection.findOne({ name: user.name }).toArray();
     //Se der tempo dar conflito quando valores do name tiverem caracteres iguais.
     if(participant) {
       res.sendStatus(409);
@@ -71,8 +71,25 @@ server.post("/participants", async (req,res) => {
 });
 
 server.post("/messages", async (req,res) => {
-  const message = req.body;
   const sender = req.headers.user;
+  const message = {...req.body, from: sender};
+  const participantsCollection = db.collection("participants");
+  const participant = await participantsCollection.findOne({ name: sender });
+  console.log('participante existente:', participant);
+
+  const messageSchema = joi.object({
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.string().valid('message','private_message').required(),
+    from: joi.string().valid(participant.name).required(),
+  });
+
+  const validation = messageSchema.validate(message, { abortEarly: true });
+  if (validation.error) {
+    console.log(validation.error.details);
+    res.sendStatus(422);
+    return;
+  }
 
   try {
     const messagesCollection = db.collection("participants");
