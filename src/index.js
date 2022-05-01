@@ -22,7 +22,6 @@ const userSchema = joi.object({
 });
 
 
-
 server.get("/participants", async (req,res) => {
   try {
     const participantsCollection = db.collection("participants");
@@ -34,7 +33,7 @@ server.get("/participants", async (req,res) => {
   }
 });
 
-server.post("/participants", async(req,res) => {
+server.post("/participants", async (req,res) => {
   const  user = req.body;
   //Só vai validar uma propriedade chamada "name".
   const validation = userSchema.validate(user);
@@ -46,6 +45,7 @@ server.post("/participants", async(req,res) => {
     const participantsCollection = db.collection("participants");
     //Encontrar participante
     const participant = await participantsCollection.findOne({ name: user.name });
+    //Se der tempo dar conflito quando valores do name tiverem caracteres iguais.
     if(participant) {
       res.sendStatus(409);
       return;
@@ -55,7 +55,7 @@ server.post("/participants", async(req,res) => {
     await participantsCollection.insertOne({name: user.name, lastStatus: Date.now()});
 
     const messagesCollection = db.collection("messages");
-    messagesCollection.insertOne({
+    await messagesCollection.insertOne({
       from: user.name, 
       to: 'Todos', 
       text: 'entra na sala...', 
@@ -66,6 +66,26 @@ server.post("/participants", async(req,res) => {
 
   } catch(e) {
       console.log(e);
+      res.sendStatus(500);
+  }
+});
+
+server.post("/messages", async (req,res) => {
+  const message = req.body;
+  const sender = req.headers.user;
+
+  try {
+    const messagesCollection = db.collection("participants");
+    await messagesCollection.insertOne({
+        ...message,
+        from: sender,
+        time: dayjs().locale('pt-br').format('HH:mm:ss')
+
+    })
+    res.sendStatus(201);
+  } catch(e) {
+      console.log(e);
+      res.sendStatus(500);
   }
 });
 
