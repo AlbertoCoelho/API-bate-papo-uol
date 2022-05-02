@@ -44,7 +44,7 @@ server.post("/participants", async (req,res) => {
   try {
     const participantsCollection = db.collection("participants");
     //Encontrar participante
-    const participant = await participantsCollection.findOne({ name: user.name }).toArray();
+    const participant = await participantsCollection.findOne({ name: user.name });
     //Se der tempo dar conflito quando valores do name tiverem caracteres iguais.
     if(participant) {
       res.sendStatus(409);
@@ -100,6 +100,35 @@ server.post("/messages", async (req,res) => {
 
     })
     res.sendStatus(201);
+  } catch(e) {
+      console.log(e);
+      res.sendStatus(500);
+  }
+});
+
+server.get("/messages", async (req,res) => {
+  const limit = parseInt(req.query.limit);
+  const user = req.headers.user;
+
+  function filteredMessages(messages){
+    if(messages.type === 'message' || messages.from === user || messages.to === user){
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  try {
+    const messagesCollection = db.collection("messages");
+    const messages = await messagesCollection.find().toArray();
+
+    const messagesFilter = messages.filter(messages => filteredMessages(messages));
+    if(!limit || limit === NaN){
+      res.send(messagesFilter.slice(-limit));
+      return;
+    }
+
+    res.send(messagesFilter);
   } catch(e) {
       console.log(e);
       res.sendStatus(500);
