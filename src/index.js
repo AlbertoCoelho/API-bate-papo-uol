@@ -37,7 +37,7 @@ server.post("/participants", async (req,res) => {
 
   const validation = userSchema.validate(user, { abortEarly: true });
   if (validation.error) {
-    console.log(validation.error.details);
+    console.log(validation.error.details.map(detail => detail.message));
     res.sendStatus(422);
     return;
   }
@@ -111,7 +111,7 @@ server.get("/messages", async (req,res) => {
   const user = req.headers.user;
 
   function filteredMessages(messages){
-    if(messages.type === 'message' || messages.from === user || messages.to === user){
+    if(messages.type === 'message' || messages.from === user || messages.to === user || messages.to === 'Todos'){
       return true;
     } else {
       return false;
@@ -134,6 +134,36 @@ server.get("/messages", async (req,res) => {
       res.sendStatus(500);
   }
 });
+
+server.post('/status', async (req,res) => {
+  const user = req.headers.user;
+  if(!user){
+    res.sendStatus(404);
+    return;
+  }
+
+  try {
+    const participantsCollection = db.collection("participants");
+    //Encontrar participante
+    const participant = await participantsCollection.findOne({ name: user.name });
+    if(!participant) {
+      res.sendStatus(404);
+      return;
+    }
+
+    //Atualizando o atributo lastStatus se o participante existir
+    //O $set vai sobrescrever o valor de uma propriedade
+    await participantsCollection.updateOne({ 
+			_id: user._id 
+		}, { $set: {lastStatus: Date.now()} });
+
+    res.sendStatus(200);
+
+  } catch(e) {
+      console.log(e);
+      res.sendStatus(500);
+  }
+})
 
 
 const port = process.env.PORT;
