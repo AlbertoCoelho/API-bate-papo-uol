@@ -163,7 +163,26 @@ server.post('/status', async (req,res) => {
       console.log(e);
       res.sendStatus(500);
   }
-})
+});
+
+setInterval( async () => {
+  const endTime = Date.now() - 10000;
+
+  try {
+    const participantsCollection = db.collection("participants");
+    const inactiveParticipants = await participantsCollection.find({ lastStatus: {$lte: endTime} }).toArray();
+    if(inactiveParticipants.length === 0){
+      return;
+    }
+
+    await participantsCollection.deleteMany({ lastStatus: {$lte: endTime} });
+
+  } catch (e) {
+    console.log(e);
+    res.sendStatus(500);
+  }
+
+}, 15000);
 
 
 const port = process.env.PORT;
