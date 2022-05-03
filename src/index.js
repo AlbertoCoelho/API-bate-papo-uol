@@ -12,7 +12,6 @@ const server = express();
 server.use(json());
 server.use(cors());
 
-//Se conectando ao banco do mongo
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 await mongoClient.connect();
 const db = mongoClient.db("api_bate_papo_uol");
@@ -43,15 +42,13 @@ server.post("/participants", async (req,res) => {
   }
   try {
     const participantsCollection = db.collection("participants");
-    //Encontrar participante
     const participant = await participantsCollection.findOne({ name: user.name });
-    //Se der tempo dar conflito quando valores do name tiverem caracteres iguais.
+
     if(participant) {
       res.sendStatus(409);
       return;
     }
 
-    //Salvando o participante
     await participantsCollection.insertOne({name: user.name, lastStatus: Date.now()});
 
     const messagesCollection = db.collection("messages");
@@ -75,7 +72,6 @@ server.post("/messages", async (req,res) => {
   const message = {...req.body, from: sender};
   const participantsCollection = db.collection("participants");
   const participant = await participantsCollection.findOne({ name: sender });
-  console.log('participante existente:', participant);
 
   const messageSchema = joi.object({
     to: joi.string().required(),
@@ -127,7 +123,7 @@ server.get("/messages", async (req,res) => {
       res.send(messagesFilter);
       return;
     }
-    
+
     res.send(messagesFilter.slice(-limit));
 
   } catch(e) {
@@ -145,15 +141,13 @@ server.post('/status', async (req,res) => {
 
   try {
     const participantsCollection = db.collection("participants");
-    //Encontrar participante
     const participant = await participantsCollection.findOne({ name: user.name });
+
     if(!participant) {
       res.sendStatus(404);
       return;
     }
 
-    //Atualizando o atributo lastStatus se o participante existir
-    //O $set vai sobrescrever o valor de uma propriedade
     await participantsCollection.updateOne({ 
 			_id: user._id 
 		}, { $set: {lastStatus: Date.now()} });
@@ -172,7 +166,7 @@ setInterval( async () => {
   try {
     const participantsCollection = db.collection("participants");
     const inactiveParticipants = await participantsCollection.find({ lastStatus: {$lte: endTime} }).toArray();
-    console.log(inactiveParticipants);
+
     if(inactiveParticipants.length === 0){
       return;
     }
