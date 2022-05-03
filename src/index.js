@@ -124,11 +124,12 @@ server.get("/messages", async (req,res) => {
 
     const messagesFilter = messages.filter(messages => filteredMessages(messages));
     if(!limit || limit === NaN){
-      res.send(messagesFilter.slice(-limit));
+      res.send(messagesFilter);
       return;
     }
+    
+    res.send(messagesFilter.slice(-limit));
 
-    res.send(messagesFilter);
   } catch(e) {
       console.log(e);
       res.sendStatus(500);
