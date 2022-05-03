@@ -171,17 +171,29 @@ setInterval( async () => {
   try {
     const participantsCollection = db.collection("participants");
     const inactiveParticipants = await participantsCollection.find({ lastStatus: {$lte: endTime} }).toArray();
+    console.log(inactiveParticipants);
     if(inactiveParticipants.length === 0){
       return;
     }
 
     await participantsCollection.deleteMany({ lastStatus: {$lte: endTime} });
 
+    const removedUserMessage = inactiveParticipants.map(removedUser => {
+      return {
+        from: removedUser.name, 
+        to: 'Todos', 
+        text: 'sai da sala...', 
+        type: 'status', 
+        time: dayjs().locale('pt-br').format('HH:mm:ss')
+      }
+    })
+
+    await db.collection("messages").insertMany([...removedUserMessage]);
+
   } catch (e) {
     console.log(e);
     res.sendStatus(500);
   }
-
 }, 15000);
 
 
